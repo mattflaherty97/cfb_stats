@@ -1,0 +1,51 @@
+---
+title: "Memphis Offensive EPA by Year (2014-2020)"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r}
+library(tidyverse)
+library(cfbscrapR)
+library(zoo)
+library(ggimage)
+```
+
+Get all seasons from 2014-2020
+
+```{r}
+mem_pbp <- data.frame()
+seasons <- seq(2014,2020, by = 1)
+mem_pbp <- purrr::map_df(seasons, function(x) {
+  readRDS(
+    url(
+      glue::glue("https://raw.githubusercontent.com/saiemgilani/cfbscrapR-data/master/data/rds/pbp_players_pos_{x}.rds")
+    )
+  )
+})
+```
+
+# Filter by Memphis
+
+```{r}
+mem_epa = mem_pbp %>%
+  filter(offense_play == 'Memphis')
+```
+
+# Overview of Memphis football seasons
+
+```{r}
+off_epa = mem_epa %>%
+  filter(rush == 1 | pass == 1) %>% 
+  group_by(offense_play, year, offense_conference) %>%
+  summarize(off_epa = mean(EPA, na.rm = TRUE)) %>%
+  arrange(desc(off_epa)) %>%
+  mutate(Team = paste0(offense_play, year)) %>%
+  ungroup() %>%
+  mutate(Rank = row_number()) %>%
+  select(Team, everything(), -offense_play)
+
+off_epa
+```
+
