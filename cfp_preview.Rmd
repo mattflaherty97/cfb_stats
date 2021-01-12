@@ -1,0 +1,297 @@
+---
+title: "CFP Preview"
+author: "Matthew Flaherty"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  html_document: 
+    code_folding: hide
+    toc: yes
+    number_sections: true
+    toc_depth: 3
+    toc_float: true
+    fig_caption: yes
+---
+```{r global options, include = FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r packages, include=FALSE}
+library(tidyverse)
+library(cfbscrapR)
+library(zoo)
+library(ggimage)
+```
+
+# Inroduction
+
+Something about the teams' records, conferences
+
+# Data
+
+from the 2020 season
+
+```{r data}
+pbp <- data.frame()
+seasons <- 2020
+pbp <- purrr::map_df(seasons, function(x) {
+  readRDS(
+    url(
+      glue::glue("https://raw.githubusercontent.com/saiemgilani/cfbscrapR-data/master/data/rds/pbp_players_pos_{x}.rds")
+    )
+  )
+})
+```
+
+```{r variables_df, include=FALSE}
+# play with data
+colnames(pbp)
+```
+
+## Notable variables
+
+* `pos_team`-team that is on offense
+  - use this to get the the offensive numbers for the teams
+* `def_pos_team`-team that is on defense
+  - use this to get the defensive numbers for the teams
+* `EPA`-expected points added for the offense
+* `def_EPA`-expected points added for the defense
+* `ExpScoreDiff`-expected point differential for each game?
+  - use this and measure against the actual point differential
+  - if above reference line, play better than expected
+* `score_diff`-use with `ExpScoreDiff`
+* `rush`-set equal to 1 to get all rush plays
+* `pass`-set equal to 1 to get all pass plays
+
+# Bama
+
+## Offense
+
+```{r bama_off}
+bama_off <- pbp %>%
+  filter(pos_team == 'Alabama') %>%
+  filter(rush == 1 | pass == 1)
+```
+
+### EPA/play
+
+Bootstrap sampling distribution of the average EPA per play for the Alabama offense
+
+```{r}
+bama_off_out <- NA
+R <- 10000
+
+for (i in 1:R) {
+  bama_samp <- sample(bama_off$EPA, size = length(bama_off$EPA), replace = TRUE)
+  bama_off_out[i] <- mean(bama_samp)
+}
+
+alpha <- 0.05
+bama_off_ci <- quantile(bama_off_out, c(alpha/2, 1-alpha/2))
+```
+
+## Defense
+
+```{r bama_def}
+bama_def <- pbp %>%
+  filter(def_pos_team == 'Alabama') %>%
+  filter(rush == 1 | pass == 1)
+```
+
+### Defensive EPA/play
+
+Bootstrap sampling distribution of the average EPA per play for the Alabama defense
+
+```{r}
+bama_def_out <- NA
+R <- 10000
+
+for (i in 1:R) {
+  bama_samp <- sample(bama_def$def_EPA, size = length(bama_def$def_EPA), replace = TRUE)
+  bama_def_out[i] <- mean(bama_samp)
+}
+
+alpha <- 0.05
+bama_def_ci <- quantile(bama_def_out, c(alpha/2, 1-alpha/2))
+```
+
+# Ohio State
+
+## Offense
+
+```{r}
+osu_off <- pbp %>%
+  filter(pos_team == 'Ohio State') %>%
+  filter(rush == 1 | pass == 1)
+```
+
+### Offensive EPA/play
+
+```{r}
+osu_off_out <- NA
+R <- 10000
+
+for (i in 1:R) {
+  osu_samp <- sample(osu_off$EPA, size = length(osu_off$EPA), replace = TRUE)
+  osu_off_out[i] <- mean(osu_samp)
+}
+
+alpha <- 0.05
+osu_off_ci <- quantile(osu_off_out, c(alpha/2, 1-alpha/2))
+```
+
+## Defense
+
+```{r}
+osu_def <- pbp %>%
+  filter(def_pos_team == 'Ohio State') %>%
+  filter(rush == 1 | pass == 1)
+```
+
+### Defensive EPA/play
+
+Need to get the other team's offensive EPA/play to see how Alabama's offense fairs compared to OSU's other opponents.
+
+```{r}
+osu_def_out <- NA
+R <- 10000
+
+for (i in 1:R) {
+  osu_samp <- sample(osu_def$EPA, size = length(osu_def$EPA), replace = TRUE)
+  osu_def_out[i] <- mean(osu_samp)
+}
+
+alpha <- 0.05
+osu_def_ci <- quantile(osu_def_out, c(alpha/2, 1-alpha/2))
+```
+
+# Alabama Offense vs Ohio State Defense
+
+Let's look at how Alabama's offense compares to Ohio State's defense. I plot the bootstrap sampling distribution for the mean EPA/play for the Alabama offense as well as the bootstrap sampling distribution for the mean EPA/play for the Ohio State defense. To get a good idea of the range of possible EPA/play, I plot vertical lines which represent the 95% confidence interval for both distributions.
+
+```{r bama_off_osu_def}
+plot(density(bama_off_out), xlab = "EPA/play", xlim = c(-0.22,0.45), col = "red4", lwd = 3, main = "")
+mytitle = "Bama Offense EPA vs OSU Defense EPA"
+mtext(side=3, line=1, at=-0.07, adj=0.25, cex=1.5, mytitle)
+caption1 = "Figure by @flahermi\nData from @cfbscrapr"
+mtext(side=1, line=4, adj = 0.97, cex=0.7, caption1)
+lines(density(osu_def_out), col = "grey45", lwd = 3)
+abline(v = bama_off_ci[1], col = "red4", lwd = 2, lty = 4)
+abline(v = bama_off_ci[2], col = "red4", lwd = 2, lty = 4)
+abline(v = mean(bama_off_out), col = "olivedrab3", lwd = 2, lty = 2)
+abline(v = osu_def_ci[1], col = "grey50", lwd = 2, lty = 3)
+abline(v = osu_def_ci[2], col = "grey50", lwd = 2, lty = 3)
+abline(v = mean(osu_def_out), col = "olivedrab3", lwd = 2, lty = 2)
+legend("topright", legend=c("Alabama", "OSU"),
+       col=c("black", "red"), lty = 1, cex = 0.65)
+text(-0.2,7.3, "OSU Def\n95% CI", col = "grey50", cex = 0.75)
+text(0.22,7.3, "Bama Off\n95% CI", col = "red4", cex = 0.75)
+text(0.-0.01,2, "Mean", col = "olivedrab3")
+text(0.28,2, "Mean", col = "olivedrab3")
+```
+
+Alabama's offense will be difficult for Ohio State to stop because Alabama's offense has a higher EPA/play than any offense that Ohio State has played. 
+
+I am not sure if this is the best way to project points, but I will subtract the mean EPA/play for the Ohio State defense from the mean EPA/play for the Alabama offense to get the projected EPA/play distribution for the Alabama offense in this game. I compare the two teams projected EPA/play later in this post.
+
+```{r bama_points}
+bama_points = bama_off_out-osu_def_out
+plot(density(bama_points), main = "Alabama Expected EPA/play vs Ohio State", xlab = "Expected EPA/play", col = "red 4", lwd = 3)
+```
+
+# Ohio State Offense vs Alabama Defense
+
+Flipping the script, I will now look at the bootstrap sampling distribution for the mean EPA/play for the Ohio State offense as well the bootstrap sampling distribution for the mean EPA/play for the Alabama defense.
+
+```{r}
+plot(density(bama_def_out), xlab = "EPA/play", main = "", xlim = c(-0.15,0.45), col = "red4", lwd = 3)
+mytitle = "Bama Defense EPA vs OSU Offense EPA"
+mtext(side=3, line=1, at=-0.01, adj=0.25, cex=1.5, mytitle)
+caption1 = "Figure by @flahermi\nData from @cfbscrapr"
+mtext(side=1, line=3.3, at=-0.06, adj=-2.7, cex=0.7, caption1)
+lines(density(osu_off_out), col = "grey 45", lwd = 3)
+abline(v = bama_def_ci[1], col = "red4", lwd = 2, lty = 4)
+abline(v = bama_def_ci[2], col = "red4", lwd = 2, lty = 4)
+abline(v = mean(bama_def_out), col = "olivedrab3", lwd = 2, lty = 2)
+abline(v = osu_off_ci[1], col = "grey50", lwd = 2, lty = 3)
+abline(v = osu_off_ci[2], col = "grey50", lwd = 2, lty = 3)
+abline(v = mean(osu_off_out), col = "olivedrab3", lwd = 2, lty = 2)
+legend("topright", legend=c("Alabama", "OSU"),
+       col=c("black", "red"), lty = 1, cex = 0.65)
+text(0.38,4, "OSU Off\n95% CI", col = "grey50", cex = 0.75)
+text(-0.08,4, "Bama Def\n95% CI", col = "red4", cex = 0.75)
+text(0.05,2, "Mean", col = "olivedrab3")
+text(0.23,2, "Mean", col = "olivedrab3")
+```
+
+As compared to Alabama's offense vs the Ohio State offense, there is overlap in the 95% confidence interval in this graph. This shows that Alabama's defense could have the upperhand over the Ohio State offense.
+
+As I did before, I will now project the EPA/play distribution by Ohio State in the National Championship. Again, I will compare the projected points of the teams later in this post.
+
+```{r osu_points}
+osu_points = osu_off_out-bama_def_out
+plot(density(osu_points), main = "Ohio State Expected EPA/play vs Alabama", xlab = "Expected EPA/play", col = "grey45", lwd = 3)
+```
+
+Now, I can look at them on the same graph for comparison.
+
+```{r bama_osu_points}
+plot(density(bama_points), col = "red4", main = "", xlab = "Expected EPA/play", xlim = c(-0.1, 0.6), ylim = c(0,5), lwd = 3)
+mytitle = "Alabama Expected EPA/play\nvs\nOhio State Expected EPA/play"
+mtext(side=3, line=0.4, cex=1.3, mytitle)
+caption1 = "Figure by @flahermi\nData from @cfbscrapr"
+mtext(side=1, line=3.3, adj = 0.97, cex=0.7, caption1)
+lines(density(osu_points), col = "grey45", lwd = 3)
+abline(v = mean(bama_points), col = "red4", lty = 2, lwd = 2)
+abline(v = mean(osu_points), col = "grey45", lty = 2, lwd = 2)
+legend("topright", legend=c("Alabama", "OSU"),
+       col=c("red4", "grey45"), lty = 1, cex = 0.65)
+```
+
+Based on these projections of bootstrap sampling distributions, Alabama will win the game as they have a higher EPA/play on average. There are limitations to this projections that may not make it accurate. The main limitation is that the two teams do not share a common opponent. Thus, the results may differ because of a different strength of schedule for both teams.
+
+It is nice to be able to project which team will have the higher EPA/play in an attempt to determine which team will be the new national champion. However, the strength of both team's opponents is different. Alabama has played 10 regular season games against SEC opponents, a conference title, and a national playoff semifinal against an ACC school. On the other hand, Ohio State has played 6 regular season games against Big Ten opponents, a conference title, and a national playoff semifinal against an ACC school. There will always be a debate about which conference is superior to the other. That being said, the expected EPA/play must be taken with a grain of salt. 
+
+# Expected score diff vs score diff
+
+I will now use the expected score difference and the actual score difference to see how both teams compare to their expected play. This will take into account how the teams perform as compared to how they were expected to perform. 
+
+I will use score difference minus expected score difference for the calculations.
+
+```{r}
+bama_diff <- bama_off$score_diff-bama_off$ExpScoreDiff
+
+bama_diff_out <- NA
+R <- 10000
+
+for (i in 1:R) {
+  bama_diff_samp <- sample(bama_diff, size = length(bama_diff), replace = TRUE)
+  bama_diff_out[i] <- mean(bama_diff_samp)
+}
+
+plot(density(bama_diff_out))
+
+osu_diff <- osu_off$score_diff-osu_off$ExpScoreDiff
+
+osu_diff_out <- NA
+R <- 10000
+
+for (i in 1:R) {
+  osu_diff_samp <- sample(osu_diff, size = length(osu_diff), replace = TRUE)
+  osu_diff_out[i] <- mean(osu_diff_samp)
+}
+
+plot(density(osu_diff_out))
+```
+
+Plot score diff over expected score diff for both teams.
+
+```{r}
+plot(density(bama_diff_out), col = "red4", main = "", xlim = c(-2.65, -1.8), lwd = 3, xlab = "Score Difference Over Expected Score Difference")
+lines(density(osu_diff_out), col = "grey45", lwd = 3)
+mytitle = "Teams Score Difference Over\nExpected Score Difference"
+mtext(side=3, line=0.4, cex=1.3, mytitle)
+caption1 = "Figure by @flahermi. Data from @cfbscrapr"
+mtext(side=1, line=4, adj = 0.97, cex=0.7, caption1)
+```
+
+Although Alabama is expected to have a higher EPA/play, Ohio State is performing better than expectations as compared to Alabama. 
