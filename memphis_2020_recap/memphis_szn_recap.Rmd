@@ -9,6 +9,8 @@ output:
     number_sections: true
     toc_depth: 3
     toc_float: true
+editor_options: 
+  chunk_output_type: console
 ---
 ```{r global options, include = FALSE}
 knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
@@ -250,3 +252,24 @@ On 4th downs, Memphis' average win probability added was `r round(mem_st_2020$av
 ![2019 AAC Conference Champs](conference_champs.jpg)
 
 # Memphis Defense
+
+```{r wpa_conf, include=FALSE}
+library(gt)
+pbp %>%
+  filter(year == 2020) %>%
+  filter(down == 4) %>% 
+  group_by(offense_conference) %>%
+  summarize(avg_wpa = round(mean(wpa, na.rm = TRUE),3)) %>%
+  arrange(desc(avg_wpa)) %>%
+  rename(Conference = offense_conference) %>%
+  rename("Average Win Probability Added" = avg_wpa) %>%
+  ungroup() %>%
+  mutate(Rank = row_number()) %>%
+  select(Rank, everything()) %>%
+  gt() %>%
+  tab_header(
+    title = "Win Probability Added",
+    subtitle = "Conference Ranking for Average Win Probability Added on 4th Down"
+  )
+```
+
