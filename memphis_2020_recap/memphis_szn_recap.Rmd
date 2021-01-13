@@ -2,21 +2,22 @@
 title: "Memphis Tigers 2020 Season Recap"
 author: "Matthew Flaherty"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
-output: 
+output:
   html_document: 
     code_folding: hide
     toc: yes
     number_sections: true
     toc_depth: 3
     toc_float: true
-editor_options: 
+editor_options:
   chunk_output_type: console
 ---
+
 ```{r global options, include = FALSE}
 knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
 ```
 
-![Memphis Logo](memphis_logo.png)
+![Picture 1: Memphis Logo](memphis_logo.png)
 
 # Introduction
 
@@ -27,6 +28,7 @@ In this post, I want to take a look back at the 2020 season for the Memphis Tige
 ```{r libraries}
 library(tidyverse)
 library(cfbscrapR)
+library(kableExtra)
 ```
 
 ```{r data}
@@ -90,7 +92,7 @@ mem_2014_2020_epa <- pbp %>%
   filter(offense_play == 'Memphis') %>%
   filter(rush == 1 | pass == 1) %>% 
   group_by(offense_play, year, offense_conference) %>%
-  summarize(off_epa = mean(EPA, na.rm = TRUE)) %>%
+  summarize(off_epa = round(mean(EPA, na.rm = TRUE),3)) %>%
   arrange(desc(off_epa)) %>%
   mutate(Team = paste0(offense_play, year)) %>%
   ungroup() %>%
@@ -101,7 +103,20 @@ mem_2014_2020_epa <- pbp %>%
 
 The Memphis offense had an average EPA/play of `r round(mem_2020$epa_play,3)`, this earned them a rank of `r mem_2020$rank`. This was their second worst EPA/play since 2014 where the Memphis offense had an EPA/play of `r round(best_mem_off$epa_play[7],3)` which ranked `r best_mem_off$rank[7]` in the NCAA that year. The best Memphis offense ranked by EPA/play since 2014 was the 2017 offense which had an EPA/play of `r round(best_mem_off$epa_play[1],3)` and ranked `r best_mem_off$rank[1]` in the NCAA that year. 
 
-![2017 Football Schedule](2017_schedule.jpg)
+![Picture 2: 2017 Football Schedule](2017_schedule.jpg)
+
+Table 1 compares the entire offensive performance from 2014-2020:
+
+```{r off_epa}
+mem_2014_2020_epa %>%
+  select(-year) %>%
+  rename(Conference = offense_conference) %>%
+  rename(EPA = off_epa) %>%
+  select(Rank, everything()) %>%
+  kbl(caption = "Memphis Offense Through the Years") %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>%
+  row_spec(6, bold = T, background = "yellow")
+```
 
 ### Pass EPA/play 
 
@@ -131,7 +146,7 @@ mem_2014_2020_pass <- pbp %>%
   filter(offense_play == 'Memphis') %>%
   filter(pass == 1) %>% 
   group_by(year, offense_conference) %>%
-  summarize(off_epa = mean(EPA, na.rm = TRUE)) %>%
+  summarize(off_epa = round(mean(EPA, na.rm = TRUE),3)) %>%
   arrange(desc(off_epa)) %>%
   mutate(Team = paste0("Memphis", year)) %>%
   ungroup() %>%
@@ -141,7 +156,20 @@ mem_2014_2020_pass <- pbp %>%
 
 The Memphis offense had an average EPA/pass of `r round(mem_pass_2020$epa_play,3)` which ranked `r mem_pass_2020$rank`. This was also the second worse EPA/play since 2014 where the offense had an EPA/pass of `r round(mem_2014_2020_pass$off_epa[7],3)` which ranked `r mem_pass_2014$rank`. The best Memphis offense for EPA/pass since 2014 was once again the 2017 offense which had an EPA/pass of `r round(mem_pass_2017$epa_play,3)` and ranked `r mem_pass_2017$rank` in the NCAA for EPA/pass.
 
-![Riley Ferguson against ECU in 2017](riley_ferguson.jpg)
+![Picture 3: Riley Ferguson against ECU in 2017](riley_ferguson.jpg)
+
+Table 2 shows the performance of the Memphis passing game from 2014-2020:
+
+```{r off_pass_epa}
+mem_2014_2020_pass %>%
+  select(-year) %>%
+  rename(Conference = offense_conference) %>%
+  rename("EPA/pass" = off_epa) %>%
+  select(Rank, everything()) %>%
+  kbl(caption = "Memphis Offense Through the Years") %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>%
+  row_spec(6, bold = T, background = "yellow")
+```
 
 ### Rush EPA/play
 
@@ -171,7 +199,7 @@ mem_2014_2020_rush <- pbp %>%
   filter(offense_play == 'Memphis') %>%
   filter(rush == 1) %>% 
   group_by(year, offense_conference) %>%
-  summarize(off_epa = mean(EPA, na.rm = TRUE)) %>%
+  summarize(off_epa = round(mean(EPA, na.rm = TRUE),3)) %>%
   arrange(desc(off_epa)) %>%
   mutate(Team = paste0("Memphis", year)) %>%
   ungroup() %>%
@@ -187,7 +215,20 @@ ncaa_run <- pbp %>%
 
 The offense had an EPA/rush of `r round(mem_rush_2020$epa_play,3)` which ranked `r mem_rush_2020$rank` in the NCAA. This was something that seemed prevalent as the season progressed as at certain times in games, it felt like Memphis had to rely on passing because they could not run the ball. This was the worst EPA/rush that Memphis had since 2014 in which they had an EPA/rush of `r round(mem_rush_2014$epa_play,3)` and ranked `r mem_rush_2014$rank` in the NCAA. The best season that Memphis had rushing the ball was in 2018 when they had an EPA/rush of `r round(mem_rush_2018$epa_play,3)` and ranked `r mem_rush_2018$rank`.
 
-![Darrell Henderson in the 2018 AAC Conference Championship Game](darrell_henderson.jpeg)
+![Picture 4: Darrell Henderson in the 2018 AAC Conference Championship Game](darrell_henderson.jpeg)
+
+Table 3 compares this 2020 offense to other Memphis offenses:
+
+```{r off_rush_epa}
+mem_2014_2020_rush %>%
+  select(-year) %>%
+  rename(Conference = offense_conference) %>%
+  rename("EPA/rush" = off_epa) %>%
+  select(Rank, everything()) %>%
+  kbl(caption = "Memphis Offense Through the Years") %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>%
+  row_spec(7, bold = T, background = "yellow")
+```
 
 One thing that is interesting is that EPA/rush almost never outperforms EPA/pass. For example, in 2018 when Memphis had its highest EPA/rush at `r round(mem_rush_2018$epa_play,3)`, it still did not fair better than its EPA/pass at `r round(mem_pass_2018$epa_play,3)`. Also, since 2014 the average EPA/pass has been `r round(mean(ncaa_pass$EPA, na.rm = TRUE),3)` and average EPA/rush has been `r round(mean(ncaa_run$EPA, na.rm = TRUE),3)` in the NCAA. This could imply that teams should pass more, but it also could imply that the run allows offenses to have success passing the ball. 
 
@@ -239,7 +280,7 @@ mem_2014_2020_st <- pbp %>%
   filter(offense_play == 'Memphis') %>%
   filter(down == 4) %>% 
   group_by(year, offense_conference) %>%
-  summarize(avg_wpa = mean(wpa, na.rm = TRUE)) %>%
+  summarize(avg_wpa = round(mean(wpa, na.rm = TRUE),3)) %>%
   arrange(desc(avg_wpa)) %>%
   mutate(Team = paste0("Memphis", year)) %>%
   ungroup() %>%
@@ -249,9 +290,186 @@ mem_2014_2020_st <- pbp %>%
 
 On 4th downs, Memphis' average win probability added was `r round(mem_st_2020$avg_wpa,3)` which ranked `r mem_st_2020$rank` in the NCAA. This is good news for Memphis fans because it shows that Coach Silverfield is not willing to be conservative and will attempt to put his teams into situations where they have a better chance to win games. This was the second most aggressive team that Memphis has had since 2014 with the only more aggressive team being the 2019 Memphis Tigers that won the conference title and earned a trip to the Cotton Bowl. That team had an average win probability added on 4th down of `r round(mem_st_2019$avg_wpa,3)` which ranked `r mem_st_2019$rank` in the NCAA.
 
-![2019 AAC Conference Champs](conference_champs.jpg)
+![Picture 5: 2019 AAC Conference Champs](conference_champs.jpg)
+
+Table 4 shows aggressive Memphis was in each year since 2014:
+
+```{r st}
+mem_2014_2020_st %>%
+  select(-year) %>%
+  rename(Conference = offense_conference) %>%
+  rename("Average Win Probability Added" = avg_wpa) %>%
+  select(Rank, everything()) %>%
+  kbl(caption = "Win Probability Added on 4th down") %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>%
+  row_spec(2, bold = T, background = "yellow")
+```
 
 # Memphis Defense
+
+I now want to do an analysis of the defense using the same EPA/play variable. A good defense will have a lower EPA/play as this means that the defense is limiting the other team from being productive. The defense was lead by first year defensive coordinator Mike MacIntyre. Without a normal off-season, many fans were questioning how switching to a new defensive coordinator would affect the team. 
+
+```{r mem_def}
+mem_def <- pbp %>%
+  filter(year == 2020) %>%
+  filter(pos_team == "Memphis") %>%
+  filter(pass == 1 | rush == 1)
+```
+
+## EPA/play
+
+```{r}
+def <- function(data, year_szn , team_want){
+  data %>%
+  filter(year == year_szn) %>%
+  filter(pass == 1 | rush == 1) %>%
+  group_by(defense_play, defense_conference) %>%
+  summarise(epa_play = mean(EPA, na.rm = TRUE)) %>%
+  arrange(epa_play) %>%
+  rename(team = defense_play) %>%
+  ungroup() %>%
+  mutate(rank = row_number()) %>%
+  filter(team == team_want)
+}
+
+mem_def_2020 <- def(pbp, year_szn = 2020, team_want = "Memphis")
+mem_def_2019 <- def(pbp, year_szn = 2019, team_want = "Memphis")
+mem_def_2018 <- def(pbp, year_szn = 2018, team_want = "Memphis")
+mem_def_2017 <- def(pbp, year_szn = 2017, team_want = "Memphis")
+mem_def_2016 <- def(pbp, year_szn = 2016, team_want = "Memphis")
+mem_def_2015 <- def(pbp, year_szn = 2015, team_want = "Memphis")
+mem_def_2014 <- def(pbp, year_szn = 2014, team_want = "Memphis")
+
+mem_2014_2020_def <- pbp %>%
+  filter(defense_play == 'Memphis') %>%
+  filter(rush == 1 | pass == 1) %>% 
+  group_by(defense_play, year, defense_conference) %>%
+  summarize(def_epa = round(mean(EPA, na.rm = TRUE),3)) %>%
+  arrange(def_epa) %>%
+  mutate(Team = paste0(defense_play, year)) %>%
+  ungroup() %>%
+  mutate(Rank = row_number()) %>%
+  rename(Conference = defense_conference) %>%
+  rename(EPA = def_epa) %>%
+  select(Rank, Team, everything(), -defense_play, -year) 
+
+```
+
+The 2020 Memphis defense had an EPA/play of `r round(mem_def_2020$epa_play,3)` which ranked `r mem_def_2020$rank` in the NCAA. This was the worst that Memphis has played defensively since 2014. The 2014 Memphis defense was the best defense since 2014 having an EPA/play of `r round(mem_def_2014$epa_play,3)` ranking `r mem_def_2014$rank` in the NCAA. This 2014 team finished as co-conference champion and won its bowl game against BYU.
+
+Table 5 displays how other Memphis defenses faired since 2014:
+
+```{r defense_chart}
+mem_2014_2020_def %>%
+  kbl(caption = "Memphis Defensive Performace") %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>%
+  row_spec(7, bold = T, background = "yellow")
+```
+
+## EPA/pass
+
+Now I will calculate the EPA/pass that the 2020 Memphis defense allowed.
+
+```{r epa_pass}
+def_pass <- function(data, year_szn , team_want){
+  data %>%
+  filter(year == year_szn) %>%
+  filter(pass == 1) %>%
+  group_by(defense_play, defense_conference) %>%
+  summarise(epa_play = mean(EPA, na.rm = TRUE)) %>%
+  arrange(epa_play) %>%
+  rename(team = defense_play) %>%
+  ungroup() %>%
+  mutate(rank = row_number()) %>%
+  filter(team == team_want)
+}
+
+mem_def_pass_2020 <- def_pass(pbp, year_szn = 2020, team_want = "Memphis")
+mem_def_pass_2019 <- def_pass(pbp, year_szn = 2019, team_want = "Memphis")
+mem_def_pass_2018 <- def_pass(pbp, year_szn = 2018, team_want = "Memphis")
+mem_def_pass_2017 <- def_pass(pbp, year_szn = 2017, team_want = "Memphis")
+mem_def_pass_2016 <- def_pass(pbp, year_szn = 2016, team_want = "Memphis")
+mem_def_pass_2015 <- def_pass(pbp, year_szn = 2015, team_want = "Memphis")
+mem_def_pass_2014 <- def_pass(pbp, year_szn = 2014, team_want = "Memphis")
+
+mem_2014_2020_def_pass <- pbp %>%
+  filter(defense_play == 'Memphis') %>%
+  filter(pass == 1) %>% 
+  group_by(defense_play, year, defense_conference) %>%
+  summarize(def_epa = round(mean(EPA, na.rm = TRUE),3)) %>%
+  arrange(def_epa) %>%
+  mutate(Team = paste0(defense_play, year)) %>%
+  ungroup() %>%
+  mutate(Rank = row_number()) %>%
+  rename(Conference = defense_conference) %>%
+  rename(EPA = def_epa) %>%
+  select(Rank, Team, everything(), -defense_play, -year) 
+
+```
+
+The 2020 defense had an EPA/pass `r round(mem_def_pass_2020$epa_play,3)`. This ranked `r round(mem_def_pass_2020$rank,3)` in the NCAA. This also was the most allowed EPA/pass since 2014. The 2014 Memphis defense also had the best EPA/pass since 2014 with an EPA/pass of `r round(mem_def_pass_2014$epa_play,3)` which ranked`r round(mem_def_pass_2014$rank,3)` in the NCAA for that year.
+
+Table 6 provides EPA/pass for each year since 2014:
+
+```{r defense_pass_chart}
+mem_2014_2020_def_pass %>%
+  rename("EPA/pass" = EPA) %>%
+  kbl(caption = "Memphis Pass Defense Through the Years") %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>%
+  row_spec(7, bold = T, background = "yellow")
+```
+
+## EPA/rush
+
+```{r def_rush}
+def_rush <- function(data, year_szn , team_want){
+  data %>%
+  filter(year == year_szn) %>%
+  filter(rush == 1) %>%
+  group_by(defense_play, defense_conference) %>%
+  summarise(epa_play = mean(EPA, na.rm = TRUE)) %>%
+  arrange(epa_play) %>%
+  rename(team = defense_play) %>%
+  ungroup() %>%
+  mutate(rank = row_number()) %>%
+  filter(team == team_want)
+}
+
+mem_def_rush_2020 <- def_rush(pbp, year_szn = 2020, team_want = "Memphis")
+mem_def_rush_2019 <- def_rush(pbp, year_szn = 2019, team_want = "Memphis")
+mem_def_rush_2018 <- def_rush(pbp, year_szn = 2018, team_want = "Memphis")
+mem_def_rush_2017 <- def_rush(pbp, year_szn = 2017, team_want = "Memphis")
+mem_def_rush_2016 <- def_rush(pbp, year_szn = 2016, team_want = "Memphis")
+mem_def_rush_2015 <- def_rush(pbp, year_szn = 2015, team_want = "Memphis")
+mem_def_rush_2014 <- def_rush(pbp, year_szn = 2014, team_want = "Memphis")
+
+mem_2014_2020_def_rush <- pbp %>%
+  filter(defense_play == 'Memphis') %>%
+  filter(rush == 1) %>% 
+  group_by(defense_play, year, defense_conference) %>%
+  summarize(def_epa = round(mean(EPA, na.rm = TRUE),3)) %>%
+  arrange(def_epa) %>%
+  mutate(Team = paste0(defense_play, year)) %>%
+  ungroup() %>%
+  mutate(Rank = row_number()) %>%
+  rename(Conference = defense_conference) %>%
+  rename(EPA = def_epa) %>%
+  select(Rank, Team, everything(), -defense_play, -year) 
+
+```
+
+Memphis finished 2020 with a EPA/rush of `r round(mem_def_rush_2020$epa_play,3)` which ranked `r mem_def_rush_2020$rank` in the NCAA. This finishes third for Memphis defenses since 2014. The 2014 defense is once again ranked first with an EPA/rush of `r round(mem_def_rush_2014$epa_play,3)` which ranked `r mem_def_rush_2014$rank` in the NCAA for that year.
+
+Table 7 includes the rest of the seasons:
+
+```{r defense_rush_chart}
+mem_2014_2020_def_rush %>%
+  rename("EPA/rush" = EPA) %>%
+  kbl(caption = "Memphis Rush Defense Through the Years") %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>%
+  row_spec(3, bold = T, background = "yellow")
+```
+
 
 ```{r wpa_conf, include=FALSE}
 library(gt)
