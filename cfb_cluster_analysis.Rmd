@@ -1,0 +1,236 @@
+---
+title: "CFB Cluster Analysis"
+output: github_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include=FALSE, messages=FALSE, warnings=FALSE}
+library(tidyverse)
+library(factoextra)
+library(stats)
+library(cfbscrapR)
+```
+
+```{r data, include=FALSE}
+season_adv_2020 <- cfb_stats_season_advanced(year = 2020)
+```
+
+# Introduction
+
+In this post, I will do a cluster analysis to find the tiers of college football (CFB) teams for the 2020 season. It will be interesting to see which teams end up in each cluster to see which teams player similarly.
+
+# Data
+
+The data that I will be using is from the [cfbscrapR](https://github.com/saiemgilani/cfbscrapR) package. I will only be using data from the 2020 season because this was the most recent season. As this dataset has 79 variables, I will do a dimensionality reduction technique (PCA) to reduce the dimensions and then form the clusters based on these new dimensions.
+
+# Principal Component Analysis (PCA)
+
+```{r}
+cfb <- as.data.frame(season_adv_2020)
+
+row.names(cfb) <- cfb$team
+
+cfb <- cfb %>%
+  select(-season, -conference, -team)
+```
+
+## Confirm That the Data is Metric
+
+The data must be metric in order to do PCA. In other words, 1 is less than 2 which is less than 3 and so forth.
+
+```{r eval=FALSE}
+summary(cfb)
+```
+
+## Scale the Data
+
+Currently, each variable has a different range of numbers. This could cause an issue because those numbers with larger ranges could have higher variation causing PCA to favor these variables more. Thus, the data must be scaled to have a mean of 0 and standard deviation of 1 in order to prevent this.
+
+```{r scale_data}
+cfb = scale(cfb)
+cfb = as.data.frame(cfb)
+```
+
+## Check Correlations
+
+I need large correlations (>0.5) because the grouping that I am doing groups raw attributes that are highly correlated. Thus, I will use the correlation matrix to observe the correlation between variables.
+
+```{r correlation_table}
+thecor = round(cor(cfb),2)
+colnames(thecor)<-colnames(cfb)
+rownames(thecor)<-colnames(cfb)
+head(round(thecor[,1:5],2))
+```
+
+There are a decent number of variables that are moderately correlated and few that have a strong positive correlation. Maybe these can be grouped together.
+
+## Choose the Number of Components
+
+I use PCA to generate derived variables from the raw data. Thus, I can capture most of the data in just a few factors.
+
+```{r components}
+# conduct PCA analysis with prcomp function
+# creats PCA output object
+pca_out = prcomp(cfb, scale = TRUE)
+
+# now that we have checked that
+# we can dive into the PCA results a bit more
+# this "get_pca_var" gives us the PCA information for the variables in our data
+res_var = get_pca_var(pca_out)
+
+# look at PCA coordinates 
+head(res_var$coord[,1:10])
+```
+
+By looking at these coordinates we can 'see' where the data is 'loading' on the PCA projection. There are currently as many factors as features so now the work begins on reducing dimensions while trying to keep as much information as possible. 
+
+To see how much of the raw data is captured by the factors, I will be using the *percentage of variance explained* by components and the *eigenvalue coresponding to the component*. The sum of percents is 100% and the number of eigenvalues is equal to the original number of features. 
+
+```{r eig}
+eig_val = get_eigenvalue(pca_out)
+eig_val[1:10,]
+```
+
+I could choose eigenvalues greater than than the mean (`r mean(eig_val$eigenvalue)`); however, there are 13 factors with an eigenvalue greater than 1 so I must look elsewhere to determine factors
+
+## Visualize
+
+### Scree Plot
+
+I can also make a scree plot to determine the dimensions.
+
+```{r scree}
+# visualize and inspect results
+# factoextra package
+fviz_eig(pca_out)
+```
+
+I will choose four factors because this is where the "elbow" is in the scree plot.
+
+### Variable Contribution
+
+I can determine which variables have the highest contribution on the construction of the PCs. I only use the top 4 to keep the graph interpretable.
+
+```{r}
+fviz_pca_var(pca_out,
+             select.var = list(contrib = 4),
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE     # Avoid text overlapping
+             )
+```
+
+It looks like predicted points added (PPA) has the highest contribution for offense and defense.
+
+### Biplot
+
+I can also do a biplot to determine what makes teams similar to each other. Again, I only use the 4-most contributing variables to keep the graph as interpretable as possible. 
+
+```{r}
+fviz_pca_biplot(pca_out,
+                select.var = list(contrib = 4),
+                col.var = "black",
+                col.ind = "steelblue",
+                repel = TRUE)
+```
+
+Vanderbilt (my school), UMass, Kansas, Louisiana Monroe, and Akron are teams with better defenses than offenses. Coastal Carolina, Alabama, BYU, Ohio St., and Cincinnati are teams with better offenses.
+
+## Save scores
+
+I have chosen 4 components so I will plot the contributions of variables to each component.
+
+```{r component_contribution}
+# Contributions of variables to PC1
+fviz_contrib(pca_out, choice = "var", axes = 1, top = 25)
+fviz_contrib(pca_out, choice = "var", axes = 2, top = 25)
+fviz_contrib(pca_out, choice = "var", axes = 3, top = 25)
+fviz_contrib(pca_out, choice = "var", axes = 4, top = 20)
+```
+
+```{r}
+cfb_pca <- pca_out$x[,1:4]
+```
+
+# Cluster Analysis
+
+Now that I have reduced the dimensions of my data frame, I can do a cluster analysis on the new factors that I created doing PCA.
+
+## Determine Optimal Number of Clusters
+
+Just as I did during PCA, I will create an elbow plot to determine the number of clusters.
+
+```{r elbow_method}
+cfb_pca <- as.data.frame(cfb_pca)
+
+fviz_nbclust(cfb_pca, kmeans, method = "wss") +
+    geom_vline(xintercept = 4, linetype = 2)+
+  labs(subtitle = "Elbow method")
+```
+
+From the elbow method, it looks like k=3, k=4, or k=5 will be the optimal value. I will see how well each cluster amount works and determine from there.
+
+```{r k_3}
+final_3 <- kmeans(cfb_pca, centers = 3, nstart = 25)
+finalplot_3 <- fviz_cluster(final_3, data = cfb_pca, labelsize = 7) + ggtitle("k = 3") 
+finalplot_3
+```
+
+```{r k_4}
+final_4 <- kmeans(cfb_pca, centers = 4, nstart = 25)
+finalplot_4 <- fviz_cluster(final_4, data = cfb_pca, labelsize = 7) + ggtitle("k = 4") 
+finalplot_4
+```
+
+```{r k_5}
+final_5 <- kmeans(cfb_pca, centers = 5, nstart = 25)
+finalplot_5 <- fviz_cluster(final_5, data = cfb_pca, labelsize = 7) + ggtitle("k = 5") 
+finalplot_5
+```
+
+```{r}
+cfb_pca$final_3 <- as.factor(final_3$cluster)
+cfb_pca$final_4 <- as.factor(final_4$cluster)
+cfb_pca$final_5 <- as.factor(final_5$cluster)
+```
+
+# Visualization
+
+```{r}
+var_explained <- pca_out$sdev^2/sum(pca_out$sdev^2)
+
+cfb_pca %>% 
+  as.data.frame %>%
+  rownames_to_column("team") %>%
+  ggplot(aes(x=PC1,y=PC2, label=team)) +
+  geom_label(aes(colour = final_4), size = 2.5)+
+  labs(x=paste0("PC1: ",round(var_explained[1]*100,1),"%"),
+       y=paste0("PC2: ",round(var_explained[2]*100,1),"%"))+
+  theme(legend.position="top")
+
+fviz_cluster(final_4, data = cfb,
+             palette = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
+             ellipse.type = "euclid",
+             # star.plot = TRUE, 
+             ggtheme = theme_minimal())
+```
+
+# Results
+
+I can determine which teams are similar to each other now that I have clustered the teams together
+
+```{r}
+cfb_pca %>% 
+  filter(final_4 == 1)
+
+cfb_pca %>% 
+  filter(final_4 == 2)
+
+cfb_pca %>% 
+  filter(final_4 == 3)
+
+cfb_pca %>% 
+  filter(final_4 == 4)
+```
+
