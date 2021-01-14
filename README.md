@@ -9,3 +9,6 @@ This folder analyzes how field goals affect the win probability of a team on dif
 
 # [Memphis Tigers 2020 Season Recap](https://github.com/mattflaherty97/cfb_stats/tree/main/memphis_2020_recap)
 I analyze the 2020 Memphis Tigers' team comparing this team to all other Memphis Tigers teams from the 2014 season to the most recent 2020 season in this folder.
+
+# [Principal Component Analysis with Cluster Analysis](https://github.com/mattflaherty97/cfb_stats/blob/main/cluster_analysis/cfb_cluster_analysis.md)
+I wanted to try dimensionality reduction that lead to a cluster analysis. I used PCA as my dimensionality reduction technique and was able to reduce my dataframe from 79 dimensions to 4 dimensions. I then clustered all 127 NCAA division-I college football teams using the 4 new dimensions. I was able to cluster the teams into 4 groups using k-means clustering.
